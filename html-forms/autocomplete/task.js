@@ -1,41 +1,85 @@
-let interestsMain = document.querySelector('.interests_main'),
-    interestCheck = interestsMain.querySelectorAll('.interest'),
-    checkedInterests,
-    allInterests,
-    parentInterest,
-    main;
+class Autocomplete {
+  constructor( container ) {
+    this.container = container;
+    this.input = container.querySelector( '.autocomplete__input' );
+    this.searchInput = container.querySelector( '.autocomplete__search' );
+    this.list = container.querySelector( '.autocomplete__list' );
+    this.valueContainer = container.querySelector( '.autocomplete__value' );
+    this.valueElement = container.querySelector( '.autocomplete__text-content' );
 
-interestCheck.forEach(el => {
-    el.addEventListener('change', function(event) {
-        main = event.target.closest('.interest').querySelector('.interests_active'); 
-        
-        if (main !== null) {
-            main.querySelectorAll('.interest__check').forEach(e => {
-                e.checked = event.target.checked;
+    this.registerEvents();
+  }
+
+  registerEvents() {
+    this.valueContainer.addEventListener( 'click', e => {
+      this.searchInput.classList.add( 'autocomplete__search_active' );
+      this.list.classList.add( 'autocomplete__list_active' );
+      this.searchInput.value = this.valueElement.textContent.trim();
+      this.searchInput.focus();
+
+      this.onSearch();
+    });
+
+
+    this.searchInput.addEventListener( 'input', e => this.onSearch());
+
+    this.list.addEventListener( 'click', e => {
+      const { target } = e;
+      if ( !target.matches( '.autocomplete__item' )) {
+        return;
+      }
+
+      const { textContent: text } = target,
+        { id: value, index } = target.dataset;
+
+      this.onSelect({
+        index,
+        text,
+        value
+      });
+    });
+  }
+
+  onSelect( item ) {
+    this.input.selectedIndex = item.index;
+    this.valueElement.textContent = item.text;
+
+    this.searchInput.classList.remove( 'autocomplete__search_active' );
+    this.list.classList.remove( 'autocomplete__list_active' );
+  }
+
+  onSearch() {
+    const matches = this.getMatches( this.searchInput.value );
+
+    this.renderMatches( matches );
+  }
+
+  renderMatches( matches ) {
+    const html = matches.map( item => `
+    	<li>
+        <span class="autocomplete__item"
+        	data-index="${item.index}"
+          data-id="${item.value}"
+        >${item.text}</span>
+      </li>
+    `);
+
+    this.list.innerHTML = html.join('');
+  }
+
+  getMatches( text ) {
+    const matchingOptions = [];
+    for(let i = 0; i < this.input.options.length; i++) {
+        const option = this.input.options[i];
+        if(option.text.toLowerCase().includes(text.toLowerCase())) {
+            matchingOptions.push({
+                text: option.text,
+                value: option.value
             });
         }
-        
+    }
+    return matchingOptions;
+  }
+}
 
-        if(el.closest('.interests').classList.contains('interests_active')) {
-            parentInterest = el.closest('.interests').closest('.interest').querySelector('.interest__check');
-            console.log('parentInterest:'+ parentInterest);
-            allInterests = el.closest('.interests').querySelectorAll('.interest__check');
-            checkedInterests = el.closest('.interests').querySelectorAll('.interest__check:checked');
-        } else {
-            parentInterest = el.querySelector('.interest__check');
-            allInterests = el.querySelectorAll('.interest__check');
-            checkedInterests = el.querySelectorAll('.interest__check:checked');
-        }
-
-        if (checkedInterests.length === 0) {
-            parentInterest.indeterminate = false;
-            parentInterest.checked = false;
-        } else if (checkedInterests.length < allInterests.length) {
-            parentInterest.indeterminate = true;
-            parentInterest.checked = false;
-        } else if (checkedInterests.length === allInterests.length) {
-            parentInterest.indeterminate = false;
-            parentInterest.checked = true;
-        }
-    });
-});
+new Autocomplete( document.querySelector( '.autocomplete' ));
